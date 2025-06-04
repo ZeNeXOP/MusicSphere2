@@ -1,0 +1,24 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.env
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs and editors (optional but recommended)
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# OS files (macOS/Linux/Windows clutter)
+Thumbs.db

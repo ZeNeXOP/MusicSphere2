@@ -1,0 +1,6 @@
+Flask
+Flask-PyMongo
+Flask-JWT-Extended
+Flask-Cors
+cloudinary
+python-dotenv
