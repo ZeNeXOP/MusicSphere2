@@ -46,6 +46,7 @@ const AppRoutes = () => {
         <Route path="/search/profile" element={<Profile />} />
         <Route path="/search/album" element={<Album />} />
         <Route path="/search/song" element={<SongDash />} />
+        <Route path="/song/:id" element={<SongDash />} />
         <Route path="/playlist" element={<Playlist />} />
         <Route path="/dashboard" element={<DashBoard />} />
         <Route path="/dashboard/settings" element={<Settings />} />

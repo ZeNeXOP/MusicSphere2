@@ -17,10 +17,12 @@ const Upload = () => {
     public: true,
   });
   const [file, setFile] = useState<File | null>(null);
+  const [coverImage, setCoverImage] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useUploadSong();
 
@@ -56,6 +58,22 @@ const Upload = () => {
         }));
       }
     }
+  };
+
+  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      if (!selectedFile.type.startsWith("image/")) {
+        setError("Please select an image file");
+        return;
+      }
+      setCoverImage(selectedFile);
+      setError(null);
+    }
+  };
+
+  const handleCoverImageClick = () => {
+    coverInputRef.current?.click();
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -125,6 +143,9 @@ const Upload = () => {
       if (formData.description) {
         uploadFormData.append("description", formData.description);
       }
+      if (coverImage) {
+        uploadFormData.append("cover", coverImage);
+      }
 
       uploadFormData.append("public", formData.public.toString());
 
@@ -140,7 +161,9 @@ const Upload = () => {
         public: true,
       });
       setFile(null);
+      setCoverImage(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      if (coverInputRef.current) coverInputRef.current.value = "";
     } catch (err) {
       const errorMessage = handleApiError(err);
       setError(errorMessage);
@@ -218,6 +241,59 @@ const Upload = () => {
                 ref={fileInputRef}
                 accept="audio/*"
                 onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+
+            {/* Cover Image Upload */}
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Cover Image (Optional)
+              </label>
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-24 h-24 border-2 border-dashed border-border rounded-lg bg-background cursor-pointer hover:border-brand transition-colors flex items-center justify-center"
+                  onClick={handleCoverImageClick}
+                >
+                  {coverImage ? (
+                    <img
+                      src={URL.createObjectURL(coverImage)}
+                      alt="Cover preview"
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <MdCloudUpload className="text-brand text-2xl mb-1 mx-auto" />
+                      <p className="text-xs text-muted">Upload Cover</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-primary mb-1">
+                    {coverImage ? coverImage.name : "No cover image selected"}
+                  </p>
+                  <p className="text-xs text-muted mb-2">
+                    Click the box to upload a cover image
+                  </p>
+                  <p className="text-xs text-muted">
+                    Supports: JPG, PNG, GIF, WebP (Max 5MB)
+                  </p>
+                  {coverImage && (
+                    <button
+                      type="button"
+                      onClick={() => setCoverImage(null)}
+                      className="text-xs text-red-500 hover:text-red-700 mt-1"
+                    >
+                      Remove cover image
+                    </button>
+                  )}
+                </div>
+              </div>
+              <input
+                type="file"
+                ref={coverInputRef}
+                accept="image/*"
+                onChange={handleCoverImageChange}
                 className="hidden"
               />
             </div>

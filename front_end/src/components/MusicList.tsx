@@ -11,6 +11,7 @@ interface Song {
   album?: string;
   genre?: string;
   duration?: number;
+  cover_url?: string;
 }
 
 interface MusicListProps {
@@ -81,6 +82,7 @@ const MusicList = ({
                 title={song.title}
                 artist={song.artist}
                 url={song.url}
+                cover_url={song.cover_url}
               />
             </ErrorBoundary>
           ))

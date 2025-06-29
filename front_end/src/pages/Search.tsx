@@ -22,6 +22,7 @@ interface SearchResult {
   url: string;
   duration: number;
   cloudinary_url: string;
+  cover_url?: string;
 }
 
 const Search = () => {

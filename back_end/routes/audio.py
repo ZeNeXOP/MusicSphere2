@@ -8,6 +8,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from models import UserHistory, Music
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from bson.objectid import ObjectId
 
 # Load environment variables
 load_dotenv()
@@ -41,10 +42,48 @@ def get_music():
             doc['_id'] = str(doc['_id'])
             doc['url'] = doc.get('cloudinary_url', '')
             doc['artist'] = doc.get('artist', 'Unknown Artist')
+            doc['cover_url'] = doc.get('cover_url', None)
         return jsonify(music_files)
     except Exception as e:
         current_app.logger.error("Database error: %s", str(e))
         return jsonify({"error": str(e)}), 500
+
+
+@audio_bp.route("/music/<song_id>", methods=["GET"])
+def get_song_by_id(song_id):
+    """Get individual song details by ID."""
+    try:
+        # Validate ObjectId format
+        if not ObjectId.is_valid(song_id):
+            return jsonify({"error": "Invalid song ID format"}), 400
+            
+        song = mongo.db.music.find_one({"_id": ObjectId(song_id)})
+        
+        if not song:
+            return jsonify({"error": "Song not found"}), 404
+            
+        # Format the response
+        song['_id'] = str(song['_id'])
+        song['url'] = song.get('cloudinary_url', '')
+        song['artist'] = song.get('artist', 'Unknown Artist')
+        song['title'] = song.get('title', 'Unknown Title')
+        song['album'] = song.get('album', '')
+        song['genre'] = song.get('genre', '')
+        song['description'] = song.get('description', '')
+        song['cover_url'] = song.get('cover_url', None)
+        song['duration'] = song.get('duration', 0)
+        song['created_at'] = song.get('created_at', '')
+        song['uploaded_by'] = song.get('uploaded_by', 'Anonymous')
+        song['play_count'] = song.get('play_count', 0)
+        song['likes'] = song.get('likes', 0)
+        
+        current_app.logger.info(f"🎵 Retrieved song: {song.get('title')} by {song.get('artist')}")
+        
+        return jsonify(song), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"💥 Error fetching song: {str(e)}")
+        return jsonify({"error": f"Failed to fetch song: {str(e)}"}), 500
 
 
 @audio_bp.route("/upload", methods=["POST"])
@@ -68,10 +107,18 @@ def upload_audio():
             return jsonify({"error": "No audio file provided"}), 400
        
         file = request.files['audio']
+        cover_file = request.files.get('cover')  # Optional cover image
+        
         current_app.logger.info(
             f"📁 File received: {file.filename}, "
             f"size: {file.content_length}"
         )
+        
+        if cover_file:
+            current_app.logger.info(
+                f"🖼️ Cover image received: {cover_file.filename}, "
+                f"size: {cover_file.content_length}"
+            )
         
         if file.filename == '':
             current_app.logger.error("❌ Empty filename")
@@ -132,6 +179,36 @@ def upload_audio():
         cloudinary_url = result["secure_url"]
         duration = result.get("duration", 0)  # Duration in seconds
         
+        # Upload cover image if provided
+        cover_url = None
+        if cover_file and cover_file.filename:
+            current_app.logger.info(f"🖼️ Starting cover image upload...")
+            
+            # Validate cover image file type
+            allowed_image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+            cover_ext = os.path.splitext(cover_file.filename)[1].lower()
+            
+            if cover_ext not in allowed_image_extensions:
+                current_app.logger.warning(f"⚠️ Invalid cover image type: {cover_ext}")
+            else:
+                try:
+                    cover_result = cloudinary.uploader.upload(
+                        cover_file,
+                        resource_type="image",
+                        folder="music_sphere/covers",
+                        transformation=[
+                            {"width": 500, "height": 500, "crop": "fill"},
+                            {"quality": "auto"}
+                        ],
+                        use_filename=True,
+                        unique_filename=False
+                    )
+                    cover_url = cover_result["secure_url"]
+                    current_app.logger.info(f"✅ Cover image upload successful: {cover_url}")
+                except Exception as cover_error:
+                    current_app.logger.error(f"⚠️ Cover upload failed: {str(cover_error)}")
+                    # Continue without cover image - don't fail the whole upload
+        
         # Create music entry with all properties
         music_entry = {
             "title": title,
@@ -145,7 +222,7 @@ def upload_audio():
             "format": result.get("format", "mp3"),
             "uploaded_by": request.form.get('uploaded_by', 'Anonymous'),
             "created_at": datetime.utcnow().isoformat(),
-            "cover_url": None,  # Can be added later
+            "cover_url": cover_url,
             "play_count": 0,
             "likes": 0,
             "public": request.form.get('public', 'true').lower() == 'true'
@@ -287,6 +364,7 @@ def search_music():
             doc['album'] = doc.get('album', '')
             doc['genre'] = doc.get('genre', '')
             doc['duration'] = doc.get('duration', 0)
+            doc['cover_url'] = doc.get('cover_url', None)
             
         current_app.logger.info(f"🔍 Search for '{query}' returned {len(results)} results")
         
